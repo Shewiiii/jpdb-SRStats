@@ -60,14 +60,13 @@ class FsrsWrapper:
             deck[vid] = card
             review_logs[vid] = review_log
 
-    def optimize_from_words(self, jpdb_words: list[dict]) -> Scheduler:
+    def optimize_from_words(self, jpdb_words: list[dict]) -> None:
         """Optimize the scheduler from the words' review history."""
 
         temp_review_logs = {}
         temp_deck = {}
         self.add_words(jpdb_words, deck=temp_deck, review_logs=temp_review_logs)
-        review_logs_list: list = list(temp_review_logs.values())
-        optimizer = Optimizer(review_logs_list)
+        optimizer = Optimizer(temp_review_logs.values())
         optimal_parameters = optimizer.compute_optimal_parameters()
         self.scheduler = Scheduler(optimal_parameters)
 
