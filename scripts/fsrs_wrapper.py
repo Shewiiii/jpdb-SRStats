@@ -2,6 +2,8 @@ from fsrs import Scheduler, Card, Rating, ReviewLog, Optimizer
 from datetime import datetime, timezone
 import logging
 
+from typing import Optional
+
 
 class FsrsWrapper:
     def __init__(self):
@@ -17,7 +19,12 @@ class FsrsWrapper:
             "easy": Rating.Easy,
         }
 
-    def add_word(self, jpdb_word: dict) -> None:
+    def add_word(
+        self,
+        jpdb_word: dict,
+        deck: Optional[dict] = None,
+        review_logs: Optional[dict] = None,
+    ) -> None:
         # {'vid': int, 'spelling': int, 'reading': int, 'reviews': list[dict]}
         vid: int = jpdb_word["vid"]
         if vid not in self.deck:
@@ -45,23 +52,35 @@ class FsrsWrapper:
 
         # Replace the empty card with the reviewed one:
         if reviewed:
-            self.deck[vid] = card
-            self.review_logs[vid] = review_log
+            if deck is None:
+                deck = self.deck
+            if review_logs is None:
+                review_logs = self.review_logs
+
+            deck[vid] = card
+            review_logs[vid] = review_log
 
     def optimize_from_words(self, jpdb_words: list[dict]) -> Scheduler:
         """Optimize the scheduler from the words' review history."""
-        for word in jpdb_words:
-            self.add_word(word)
 
-        review_logs: list = list(self.review_logs.values())
-        optimizer = Optimizer(review_logs)
+        temp_review_logs = {}
+        temp_deck = {}
+        self.add_words(jpdb_words, deck=temp_deck, review_logs=temp_review_logs)
+        review_logs_list: list = list(temp_review_logs.values())
+        optimizer = Optimizer(review_logs_list)
         optimal_parameters = optimizer.compute_optimal_parameters()
         self.scheduler = Scheduler(optimal_parameters)
+
         logging.info(f"Scheduler optimized from {len(jpdb_words)} words.")
 
-    def add_words(self, jpdb_words: list[dict]) -> None:
+    def add_words(
+        self,
+        jpdb_words: list[dict],
+        deck: Optional[dict] = None,
+        review_logs: Optional[dict] = None,
+    ) -> None:
         for word in jpdb_words:
-            self.add_word(word)
+            self.add_word(word, deck, review_logs)
 
 
 scheduler = Scheduler()
